@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<style>
+    #sites .site-name + .projects {
+        display:none;
+    }
+    #sites .site-name.active + .projects {
+        display: block;
+    }
+
+    #sites .projectTitle .documents {
+        display: none;
+    }
+
+    #sites .projectTitle {
+        cursor: pointer;
+    }
+    
+    #sites .projectTitle.active .documents {
+        display: block;
+        cursor: pointer;
+    }
+
+    #sites .site-name h2,
+    #sites .site-name.active h2{
+        display: inline-block;
+        position: relative;
+        padding-right: 1em;
+        cursor: pointer;
+    }
+    
+    #sites .site-name h2,
+    #sites .site-name.active h2,
+    #sites .projectTitle,
+    #sites .projectTitle.active{
+        position: relative;
+        padding-right: 1em;
+    }
+    #sites .site-name h2::after,
+    #sites .projectTitle::after {
+        content: ">";
+        margin-left: .5em;
+        position: absolute;
+        top: 0;
+        right: 0;
+    }
+
+    #sites .site-name.active h2::after,
+    #sites .projectTitle.active::after {
+        content: ">";
+        margin-left: .5em;
+        display: inline-block;
+        transform: rotate(90deg);
+    }
+
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sites</h1>
+        <ul id="sites"></ul>
+    </div>
+  
+  <script>
+    const apiURL = "https://edocsapi.azurewebsites.net/Core6";
+    const authURL = "https://edocsapi.azurewebsites.net/Auth/api/Login";
+    const appToken = "xikxafatwae";
+    const username = "testuser1@edocuments.co.uk";
+    const password = "20DemoPass20";
+
+    const body = JSON.stringify({ username, password });
+
+    let authToken = "";
+    let data = "";
+
+    const getAuthToken = async () => {
+    await fetch(authURL, {
+        method: "POST",
+        headers: {
+        Authorization: `Digest username="${appToken}" realm="_root_" password=""`,
+        "Content-Type": "application/json"
+        },
+        body
+    })
+        .then(res => res.json())
+        .then(data => {
+        authToken = data.Result.auth.token;
+        });
+    };
+
+    const getDataFromAPI = async () => {
+    await fetch(`${apiURL}/api/Portfolio/ByUserId`, {
+        method: "GET",
+        headers: {
+        Authorization: `Digest username="${appToken}" realm="_root_" password="${authToken}"`,
+        "Content-Type": "application/json"
+        }
+    })
+        .then(res => res.json())
+        .then(json => {
+        data = json;
+        });
+    };
+
+    const addSitesData = async () => {
+    const sites = data.Result.sites;
+    let template = "";
+
+    sites.forEach(site => {
+        const address = site.address
+        .split(",")
+        .filter(e => e)
+        .toString()
+        .replaceAll(",", "<br>");
+
+        let projects = "";
+        let documents = "";
+
+        site.projects.forEach(project => {
+            
+        projects += `<li class="projectTitle" data-projectId = "${project.id}">${project.name}`;
+        if (project.documents.length) {
+            documents = `<ul class="documents">`;
+            project.documents.forEach(doc => {
+            documents += `
+                <li>
+                    <a 
+                    class="documentLink" 
+                    data-documentId=${doc.id}
+                    href="#"
+                    >
+                        ${doc.name}
+                    </a>
+                </li>`;
+            });
+            documents += `</ul>`;
+        }
+        projects += documents;
+        });
+
+        template += `
+        <li data-siteId="${site.id}">
+        <div class="site-name">
+        <h2>${site.name}</h2>
+        <address>
+            ${address}<br>
+            ${site.postcode}
+        </address>
+        </div>
+        <div class="projects">
+        <h3>Projects</h3>
+        <ul>
+            ${projects}
+        </ul>
+        </div>
+        </li>
+        `;
+    });
+
+    document.getElementById("sites").innerHTML = template;
+    };
+
+    const main = async () => {
+    await getAuthToken();
+    await getDataFromAPI();
+    await addSitesData();
+
+    //events
+
+    const elms = document.querySelectorAll(".documentLink");
+    const sitenames = document.querySelectorAll(".site-name");
+    const projects = document.querySelectorAll(".projectTitle");
+
+    console.log(sitenames);
+
+    elms.forEach(link => {
+        link.addEventListener("click", e => {
+        e.preventDefault();
+
+        const _this = e.target;
+        console.log(_this);
+        alert(`#TODO get document\n${_this.dataset.documentid}`);
+        });
+    });
+
+    sitenames.forEach(sitename => {
+        sitename.addEventListener("click", e => {
+        e.preventDefault();
+
+        const _this = e.target.parentElement;
+
+        if (_this.classList.contains("active")) {
+            _this.classList.remove("active");
+        } else {
+            _this.classList.add("active");
+        }
+        });
+    });
+
+    projects.forEach(sitename => {
+        sitename.addEventListener("click", e => {
+        e.preventDefault();
+        const _this = e.target;
+        if (_this.classList.contains("active")) {
+            _this.classList.remove("active");
+        } else {
+            _this.classList.add("active");
+        }
+        });
+    });
+    };
+
+    main();
+
+</script>
+
+</body>
+</html>
